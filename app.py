@@ -118,6 +118,24 @@ def admin_list():
         }
         for r in rows
     ])
+@app.post("/create-admin")
+def create_admin():
+    data = request.json
+    email = data.get("email")
+    password = data.get("password")
+
+    if User.query.filter_by(email=email).first():
+        return jsonify({"error": "User already exists"}), 400
+
+    admin = User(
+        email=email,
+        password=generate_password_hash(password),
+        is_admin=True
+    )
+    db.session.add(admin)
+    db.session.commit()
+
+    return jsonify({"message": "Admin created successfully"})
 
 
 # ---- BOOT ----
