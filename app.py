@@ -4,10 +4,11 @@ import uuid
 
 app = Flask(__name__)
 
-# ---- VERİTABANI ----
+# ---- VERİTABANI AYARI ----
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
+
 
 # ---- MODELLER ----
 class User(db.Model):
@@ -17,6 +18,7 @@ class User(db.Model):
     token = db.Column(db.String(200))
     is_admin = db.Column(db.Boolean, default=False)
 
+
 class Mesai(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer)
@@ -25,10 +27,12 @@ class Mesai(db.Model):
     end = db.Column(db.String(10))
     status = db.Column(db.String(20), default="Bekliyor")
 
-# ---- KULLANICI KAYIT ----
+
+# ---- KULLANICI KAYDI ----
 @app.post("/register")
 def register():
     data = request.json
+
     if User.query.filter_by(email=data["email"]).first():
         return jsonify({"error": "Bu email zaten kayıtlı"}), 400
 
@@ -39,7 +43,9 @@ def register():
     )
     db.session.add(new_user)
     db.session.commit()
+
     return jsonify({"success": True})
+
 
 # ---- GİRİŞ ----
 @app.post("/login")
@@ -56,10 +62,12 @@ def login():
         "is_admin": user.is_admin
     })
 
-# ---- MESAİ OLUŞTUR ----
+
+# ---- MESAİ OLUŞTURMA ----
 @app.post("/mesai/create")
 def create_mesai():
     data = request.json
+
     new_mesai = Mesai(
         user_id=data["user_id"],
         date=data["date"],
@@ -68,32 +76,16 @@ def create_mesai():
     )
     db.session.add(new_mesai)
     db.session.commit()
+
     return jsonify({"success": True})
 
-# ---- KULLANICI TALEPLERİNİ LİSTELE ----
+
+# ---- KULLANICININ MESAİLERİ ----
 @app.get("/mesai/list")
-def list_mesai():
+def mesai_list():
     user_id = request.args.get("user_id")
+
     rows = Mesai.query.filter_by(user_id=user_id).all()
     result = [
-        {"id": r.id, "date": r.date, "start": r.start, "end": r.end, "status": r.status}
-        for r in rows
-    ]
-    return jsonify(result)
-
-# ---- ADMİN PANELİ ----
-@app.get("/admin")
-def admin_panel():
-    rows = Mesai.query.all()
-    html = """
-<html>
-<head><title>Mesai Yönetimi</title></head>
-<body>
-<h1>Admin Panel</h1>
-</body>
-</html>
-"""
-
-    <h1>Mesai Talepleri</h1>
-    <table border='1' cellpadding='5'>
-      <tr><th>ID</th><th>Kullanıcı</th><th>Tarih</th>
+        {
+            "id": r.id,
