@@ -102,7 +102,7 @@ def mesai_list():
     ])
 
 
-# ---- ADMIN LIST ----
+# ---- ADMIN API ----
 @app.get("/admin/list")
 def admin_list():
     rows = Mesai.query.all()
@@ -120,7 +120,7 @@ def admin_list():
     ])
 
 
-# ---- ADMIN OLUŞTUR ----
+# ---- ADMIN CREATE ----
 @app.post("/create-admin")
 def create_admin():
     data = request.json
@@ -141,7 +141,6 @@ def create_admin():
     return jsonify({"message": "Admin created successfully"})
 
 
-# ---- BOOT ----
-if __name__ == "__main__":
-    with app.app_context():
-        db.create_all()
+# ---- DB INIT ----
+with app.app_context():
+    db.create_all()
