@@ -1,10 +1,10 @@
-from flask import Flask, request, jsonify, render_template_string
+from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import uuid
 
 app = Flask(__name__)
 
-# ---- VERİTABANI AYARI ----
+# ---- DATABASE ----
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
@@ -28,7 +28,7 @@ class Mesai(db.Model):
     status = db.Column(db.String(20), default="Bekliyor")
 
 
-# ---- KULLANICI KAYDI ----
+# ---- REGISTER ----
 @app.post("/register")
 def register():
     data = request.json
@@ -39,7 +39,7 @@ def register():
     new_user = User(
         email=data["email"],
         password=data["password"],
-        token=str(uuid.uuid4())
+        token=str(uuid.uuid4()),
     )
     db.session.add(new_user)
     db.session.commit()
@@ -47,14 +47,14 @@ def register():
     return jsonify({"success": True})
 
 
-# ---- GİRİŞ ----
+# ---- LOGIN ----
 @app.post("/login")
 def login():
     data = request.json
-    user = User.query.filter_by(email=data["email"], password=data["password"]).first()
 
+    user = User.query.filter_by(email=data["email"], password=data["password"]).first()
     if not user:
-        return jsonify({"error": "Hatalı email veya şifre"}), 401
+        return jsonify({"error": "Hatalı giriş"}), 401
 
     return jsonify({
         "token": user.token,
@@ -63,29 +63,61 @@ def login():
     })
 
 
-# ---- MESAİ OLUŞTURMA ----
+# ---- MESAİ OLUŞTUR ----
 @app.post("/mesai/create")
 def create_mesai():
     data = request.json
 
-    new_mesai = Mesai(
+    row = Mesai(
         user_id=data["user_id"],
         date=data["date"],
         start=data["start"],
-        end=data["end"]
+        end=data["end"],
     )
-    db.session.add(new_mesai)
+    db.session.add(row)
     db.session.commit()
 
     return jsonify({"success": True})
 
 
-# ---- KULLANICININ MESAİLERİ ----
+# ---- MESAİ LİSTELE ----
 @app.get("/mesai/list")
 def mesai_list():
     user_id = request.args.get("user_id")
-
     rows = Mesai.query.filter_by(user_id=user_id).all()
-    result = [
+
+    return jsonify([
         {
             "id": r.id,
+            "date": r.date,
+            "start": r.start,
+            "end": r.end,
+            "status": r.status
+        }
+        for r in rows
+    ])
+
+
+# ---- ADMIN API ----
+@app.get("/admin/list")
+def admin_list():
+    rows = Mesai.query.all()
+
+    return jsonify([
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "date": r.date,
+            "start": r.start,
+            "end": r.end,
+            "status": r.status
+        }
+        for r in rows
+    ])
+
+
+# ---- BOOT ----
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+    app.run(host="0.0.0.0", port=5000)
