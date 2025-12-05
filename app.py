@@ -121,3 +121,13 @@ if __name__ == "__main__":
     with app.app_context():
         db.create_all()
     app.run(host="0.0.0.0", port=5000)
+    @app.post("/create-admin")
+def create_admin():
+    email = "admin@example.com"
+    password = "Admin123!"
+    # Admin oluştur
+    cur.execute("INSERT INTO users (email, password, is_admin) VALUES (?, ?, ?)",
+                (email, password, 1))
+    conn.commit()
+    return {"message": "Admin user created", "email": email}
+
