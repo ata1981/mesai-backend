@@ -1,59 +1,53 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
-from werkzeug.security import generate_password_hash, check_password_hash
+import uuid
 
 app = Flask(__name__)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///mesai.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
+# ---- DATABASE ----
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///database.db"
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 
 
-# ----------------------------
-# MODELLER
-# ----------------------------
+# ---- MODELLER ----
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(255), nullable=False)
+    email = db.Column(db.String(100), unique=True)
+    password = db.Column(db.String(100))
+    token = db.Column(db.String(200))
     is_admin = db.Column(db.Boolean, default=False)
 
 
 class Mesai(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, nullable=False)
-    date = db.Column(db.String(20), nullable=False)
-    start_time = db.Column(db.String(10), nullable=False)
-    end_time = db.Column(db.String(10), nullable=False)
-    status = db.Column(db.String(20), default="pending")  # pending / approved / rejected
+    user_id = db.Column(db.Integer)
+    date = db.Column(db.String(50))
+    start = db.Column(db.String(10))
+    end = db.Column(db.String(10))
+    status = db.Column(db.String(20), default="Bekliyor")
 
 
-with app.app_context():
-    db.create_all()
-
-
-# ----------------------------
-# KAYIT OL
-# ----------------------------
+# ---- REGISTER ----
 @app.post("/register")
 def register():
     data = request.json
-    email = data.get("email")
-    password = generate_password_hash(data.get("password"))
 
-    if User.query.filter_by(email=email).first():
-        return jsonify({"error": "Email already exists"}), 400
+    if User.query.filter_by(email=data["email"]).first():
+        return jsonify({"error": "Bu email zaten kayıtlı"}), 400
 
-    user = User(email=email, password=password)
-    db.session.add(user)
+    new_user = User(
+        email=data["email"],
+        password=data["password"],
+        token=str(uuid.uuid4()),
+    )
+    db.session.add(new_user)
     db.session.commit()
 
-    return jsonify({"message": "User registered"})
+    return jsonify({"success": True})
 
 
-# ----------------------------
-# LOGIN
-# ----------------------------
+# ---- LOGIN ----
 @app.post("/login")
 def login():
     data = request.json
@@ -62,5 +56,72 @@ def login():
 
     user = User.query.filter_by(email=email).first()
 
-    if not user or
+    if not user or not check_password_hash(user.password, password):
+        return jsonify({"error": "Invalid credentials"}), 401
 
+    return jsonify({
+        "message": "Login successful",
+        "user_id": user.id,
+        "is_admin": user.is_admin
+    })
+
+
+
+# ---- MESAİ OLUŞTUR ----
+@app.post("/mesai/create")
+def create_mesai():
+    data = request.json
+
+    row = Mesai(
+        user_id=data["user_id"],
+        date=data["date"],
+        start=data["start"],
+        end=data["end"],
+    )
+    db.session.add(row)
+    db.session.commit()
+
+    return jsonify({"success": True})
+
+
+# ---- MESAİ LİSTELE ----
+@app.get("/mesai/list")
+def mesai_list():
+    user_id = request.args.get("user_id")
+    rows = Mesai.query.filter_by(user_id=user_id).all()
+
+    return jsonify([
+        {
+            "id": r.id,
+            "date": r.date,
+            "start": r.start,
+            "end": r.end,
+            "status": r.status
+        }
+        for r in rows
+    ])
+
+
+# ---- ADMIN API ----
+@app.get("/admin/list")
+def admin_list():
+    rows = Mesai.query.all()
+
+    return jsonify([
+        {
+            "id": r.id,
+            "user_id": r.user_id,
+            "date": r.date,
+            "start": r.start,
+            "end": r.end,
+            "status": r.status
+        }
+        for r in rows
+    ])
+
+
+# ---- BOOT ----
+if __name__ == "__main__":
+    with app.app_context():
+        db.create_all()
+    app.run(host="0.0.0.0", port=5000)
