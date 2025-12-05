@@ -86,6 +86,14 @@ def list_mesai():
 def admin_panel():
     rows = Mesai.query.all()
     html = """
+<html>
+<head><title>Mesai Yönetimi</title></head>
+<body>
+<h1>Admin Panel</h1>
+</body>
+</html>
+"""
+
     <h1>Mesai Talepleri</h1>
     <table border='1' cellpadding='5'>
       <tr><th>ID</th><th>Kullanıcı</th><th>Tarih</th>
