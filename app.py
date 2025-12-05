@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 import uuid
 
 app = Flask(__name__)
@@ -14,7 +15,7 @@ db = SQLAlchemy(app)
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(100), unique=True)
-    password = db.Column(db.String(100))
+    password = db.Column(db.String(200))
     token = db.Column(db.String(200))
     is_admin = db.Column(db.Boolean, default=False)
 
@@ -38,7 +39,7 @@ def register():
 
     new_user = User(
         email=data["email"],
-        password=data["password"],
+        password=generate_password_hash(data["password"]),
         token=str(uuid.uuid4()),
     )
     db.session.add(new_user)
@@ -64,7 +65,6 @@ def login():
         "user_id": user.id,
         "is_admin": user.is_admin
     })
-
 
 
 # ---- MESAİ OLUŞTUR ----
@@ -102,7 +102,7 @@ def mesai_list():
     ])
 
 
-# ---- ADMIN API ----
+# ---- ADMIN LIST ----
 @app.get("/admin/list")
 def admin_list():
     rows = Mesai.query.all()
@@ -118,6 +118,9 @@ def admin_list():
         }
         for r in rows
     ])
+
+
+# ---- ADMIN OLUŞTUR ----
 @app.post("/create-admin")
 def create_admin():
     data = request.json
@@ -142,4 +145,4 @@ def create_admin():
 if __name__ == "__main__":
     with app.app_context():
         db.create_all()
-    app.run(host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5
